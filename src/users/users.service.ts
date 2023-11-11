@@ -18,6 +18,8 @@ export class UsersService {
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
+    // console.log('createUserDto', createUserDto);
+    // console.log(typeof createUserDto.password);
     if (typeof createUserDto.password !== 'string') {
       throw new Error('Password must be a string');
     }
@@ -111,7 +113,7 @@ export class UsersService {
     });
   }
 
-  async update(id: User['id'], payload: UpdateUserDto): Promise<User> {
+  async updateByUserId(id: User['id'], payload: UpdateUserDto): Promise<User> {
     if (payload.password) {
       payload.password = await this.hashPassword(payload.password);
     }
@@ -125,7 +127,24 @@ export class UsersService {
     });
   }
 
-  async softDelete(id: number): Promise<void> {
+  async updateByWhere(
+    where: Prisma.UserWhereUniqueInput,
+    payload: UpdateUserDto,
+  ): Promise<User> {
+    if (payload.password) {
+      payload.password = await this.hashPassword(payload.password);
+    }
+
+    return this.prisma.user.update({
+      where,
+      data: payload,
+      include: {
+        file: true,
+      },
+    });
+  }
+
+  async softDelete(id: User['id']): Promise<void> {
     await this.prisma.user.update({
       where: { id },
       data: {

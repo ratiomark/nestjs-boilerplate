@@ -5,11 +5,12 @@ import { ConfigService } from '@nestjs/config';
 import { JwtRefreshPayloadType } from './types/jwt-refresh-payload.type';
 import { OrNeverType } from '../../utils/types/or-never.type';
 import { AllConfigType } from 'src/config/config.type';
+import { jwtRefreshStrategyName } from './strategy-names';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(
   Strategy,
-  'jwt-refresh',
+  jwtRefreshStrategyName,
 ) {
   constructor(private configService: ConfigService<AllConfigType>) {
     super({
@@ -26,7 +27,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
 
     if (!payload.sessionId) {
       console.log('No sessionId in payload, throwing UnauthorizedException.');
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('No sessionId in payload.');
     }
 
     console.log('Validation successful, returning payload.');

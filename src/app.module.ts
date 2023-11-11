@@ -8,7 +8,7 @@ import {
 import { UsersModule } from './users/users.module';
 import { FilesModule } from './files/files.module';
 import { AuthModule } from './auth/auth.module';
-import databaseConfig from './config/database.config';
+// import databaseConfig from './config/database.config';
 import authConfig from './config/auth.config';
 import appConfig from './config/app.config';
 import EmailConfig from './config/mail.config';
@@ -30,13 +30,16 @@ import { HomeModule } from './home/home.module';
 import { AllConfigType } from './config/config.type';
 import { SessionModule } from './session/session.module';
 import { MailerModule } from './mailer/mailer.module';
+import { DevResponseModule } from './dev-response/dev-response.module';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtGuard } from './common/guargs';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [
-        databaseConfig,
+        // databaseConfig,
         authConfig,
         appConfig,
         EmailConfig,
@@ -46,7 +49,11 @@ import { MailerModule } from './mailer/mailer.module';
         twitterConfig,
         appleConfig,
       ],
-      envFilePath: ['.env'],
+      envFilePath: [
+        `.env.${process.env.NODE_ENV}`,
+        // '.env.development',
+        // '.env.production',
+      ],
     }),
     /**
      * PrismaModule is imported globally and configured.
@@ -96,8 +103,13 @@ import { MailerModule } from './mailer/mailer.module';
     MailModule,
     MailerModule,
     HomeModule,
+    DevResponseModule,
   ],
   providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtGuard,
+    },
     /**
      * PrismaClientExceptionFilter for handling Prisma DB exceptions.
      * @see {@link https://nestjs-prisma.dev/docs/exception-filter}

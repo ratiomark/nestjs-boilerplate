@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { Prisma, Role, Session, User } from '@prisma/client';
 import { NullableType } from '../utils/types/nullable.type';
+import { GetBatchResult } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class SessionService {
@@ -40,7 +41,7 @@ export class SessionService {
     });
   }
 
-  async create(data: { userId: number }) {
+  async create(data: { userId: User['id'] }) {
     return await this.prisma.session.create({
       data: {
         user: {
@@ -59,8 +60,11 @@ export class SessionService {
     id?: Session['id'];
     user?: Pick<User, 'id'>;
     excludeId?: Session['id'];
-  }): Promise<void> {
-    await this.prisma.session.updateMany({
+  }): Promise<void | GetBatchResult> {
+    console.log('criteria', criteria);
+    console.log('excludeId', excludeId);
+    console.log('user', criteria.user);
+    const updateManyResult = await this.prisma.session.updateMany({
       where: {
         ...criteria,
         id: criteria.id
@@ -73,5 +77,7 @@ export class SessionService {
         deletedAt: new Date(),
       },
     });
+    console.log('updateManyResult', updateManyResult);
+    return updateManyResult;
   }
 }

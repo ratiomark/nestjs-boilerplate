@@ -6,6 +6,7 @@ import {
   MAIL_HOST,
   MAIL_PORT,
 } from '../utils/constants';
+import { HttpStatus } from '@nestjs/common';
 
 describe('Auth user (e2e)', () => {
   const app = APP_URL;
@@ -55,7 +56,7 @@ describe('Auth user (e2e)', () => {
         firstName: newUserFirstName,
         lastName: newUserLastName,
       })
-      .expect(204);
+      .expect(201);
   });
 
   it('Login unconfirmed user: /api/v1/auth/email/login (POST)', () => {
@@ -88,7 +89,7 @@ describe('Auth user (e2e)', () => {
       .send({
         hash,
       })
-      .expect(204);
+      .expect(HttpStatus.OK);
   });
 
   it('Can not confirm email with same link twice: /api/v1/auth/email/confirm (POST)', async () => {
@@ -111,7 +112,13 @@ describe('Auth user (e2e)', () => {
       .send({
         hash,
       })
-      .expect(404);
+      .expect(404)
+      .expect(({ body }) => {
+        expect(body.message).toBeDefined();
+        expect(body.message).toBe(
+          '[P2025]: An operation failed because it depends on one or more records that were required but not found. Record to update not found.',
+        );
+      });
   });
 
   it('Login confirmed user: /api/v1/auth/email/login (POST)', () => {
@@ -165,67 +172,147 @@ describe('Auth user (e2e)', () => {
       });
   });
 
-  it('New user update profile: /api/v1/auth/me (PATCH)', async () => {
+  // it('New user update profile: /api/v1/auth/me (PATCH)', async () => {
+  //   const newUserNewName = Date.now().toString();
+  //   const newUserNewPassword = 'new-secret';
+  //   const newUserApiToken = await request(app)
+  //     .post('/api/v1/auth/email/login')
+  //     .send({ email: newUserEmail, password: newUserPassword })
+  //     .then(({ body }) => body.token);
+
+  //   await request(app)
+  //     .patch('/api/v1/auth/me')
+  //     .auth(newUserApiToken, {
+  //       type: 'bearer',
+  //     })
+  //     .send({
+  //       firstName: newUserNewName,
+  //       password: newUserNewPassword,
+  //     })
+  //     .expect(422);
+
+  //   await request(app)
+  //     .patch('/api/v1/auth/me')
+  //     .auth(newUserApiToken, {
+  //       type: 'bearer',
+  //     })
+  //     .send({
+  //       firstName: newUserNewName,
+  //       password: newUserNewPassword,
+  //       oldPassword: newUserPassword,
+  //     })
+  //     .expect(200);
+
+  //   await request(app)
+  //     .post('/api/v1/auth/email/login')
+  //     .send({ email: newUserEmail, password: newUserNewPassword })
+  //     .expect(200)
+  //     .expect(({ body }) => {
+  //       expect(body.token).toBeDefined();
+  //     });
+
+  //   await request(app)
+  //     .patch('/api/v1/auth/me')
+  //     .auth(newUserApiToken, {
+  //       type: 'bearer',
+  //     })
+  //     .send({ password: newUserPassword, oldPassword: newUserNewPassword })
+  //     .expect(200);
+  // });
+
+  describe('Profile update:', () => {
+    // This beforeAll is specific to the nested describe block
     const newUserNewName = Date.now().toString();
     const newUserNewPassword = 'new-secret';
-    const newUserApiToken = await request(app)
-      .post('/api/v1/auth/email/login')
-      .send({ email: newUserEmail, password: newUserPassword })
-      .then(({ body }) => body.token);
-
-    await request(app)
-      .patch('/api/v1/auth/me')
-      .auth(newUserApiToken, {
-        type: 'bearer',
-      })
-      .send({
-        firstName: newUserNewName,
-        password: newUserNewPassword,
-      })
-      .expect(422);
-
-    await request(app)
-      .patch('/api/v1/auth/me')
-      .auth(newUserApiToken, {
-        type: 'bearer',
-      })
-      .send({
-        firstName: newUserNewName,
-        password: newUserNewPassword,
-        oldPassword: newUserPassword,
-      })
-      .expect(200);
-
-    await request(app)
-      .post('/api/v1/auth/email/login')
-      .send({ email: newUserEmail, password: newUserNewPassword })
-      .expect(200)
-      .expect(({ body }) => {
-        expect(body.token).toBeDefined();
-      });
-
-    await request(app)
-      .patch('/api/v1/auth/me')
-      .auth(newUserApiToken, {
-        type: 'bearer',
-      })
-      .send({ password: newUserPassword, oldPassword: newUserNewPassword })
-      .expect(200);
-  });
-
-  it('New user delete profile: /api/v1/auth/me (DELETE)', async () => {
-    const newUserApiToken = await request(app)
-      .post('/api/v1/auth/email/login')
-      .send({ email: newUserEmail, password: newUserPassword })
-      .then(({ body }) => body.token);
-
-    await request(app).delete('/api/v1/auth/me').auth(newUserApiToken, {
-      type: 'bearer',
+    let newUserApiToken: string;
+    beforeAll(async () => {
+      // Code here runs before the tests in the nested describe block
+      newUserApiToken = await request(app)
+        .post('/api/v1/auth/email/login')
+        .send({ email: newUserEmail, password: newUserPassword })
+        .then(({ body }) => body.token);
     });
 
-    return request(app)
-      .post('/api/v1/auth/email/login')
-      .send({ email: newUserEmail, password: newUserPassword })
-      .expect(422);
+    it('New user update profile(password failure): /api/v1/auth/me (PATCH)', async () => {
+      await request(app)
+        .patch('/api/v1/auth/me')
+        .auth(newUserApiToken, {
+          type: 'bearer',
+        })
+        .send({
+          firstName: newUserNewName,
+          password: newUserNewPassword,
+        })
+        .expect(422);
+    });
+
+    it('New user update profile(new password and firstName success): /api/v1/auth/me (PATCH)', async () => {
+      // const newUserNewName = Date.now().toString();
+      // const newUserNewPassword = 'new-secret';
+      // const newUserApiToken = await request(app)
+      //   .post('/api/v1/auth/email/login')
+      //   .send({ email: newUserEmail, password: newUserPassword })
+      //   .then(({ body }) => body.token);
+
+      await request(app)
+        .patch('/api/v1/auth/me')
+        .auth(newUserApiToken, {
+          type: 'bearer',
+        })
+        .send({
+          firstName: newUserNewName,
+          password: newUserNewPassword,
+          oldPassword: newUserPassword,
+        })
+        .expect(200);
+    });
+
+    it('New user update profile(new email success):  /api/v1/auth/me (PATCH)', async () => {
+      // const newUserNewName = Date.now().toString();
+      // const newUserNewPassword = 'new-secret';
+      // const newUserApiToken = await request(app)
+      //   .post('/api/v1/auth/email/login')
+      //   .send({ email: newUserEmail, password: newUserPassword })
+      //   .then(({ body }) => body.token);
+
+      await request(app)
+        .post('/api/v1/auth/email/login')
+        .send({ email: newUserEmail, password: newUserNewPassword })
+        .expect(200)
+        .expect(({ body }) => {
+          expect(body.token).toBeDefined();
+        });
+    });
+
+    it('New user update profile(password success):  /api/v1/auth/me (PATCH)', async () => {
+      // const newUserNewName = Date.now().toString();
+      // const newUserNewPassword = 'new-secret';
+      // const newUserApiToken = await request(app)
+      //   .post('/api/v1/auth/email/login')
+      //   .send({ email: newUserEmail, password: newUserPassword })
+      //   .then(({ body }) => body.token);
+
+      await request(app)
+        .patch('/api/v1/auth/me')
+        .auth(newUserApiToken, {
+          type: 'bearer',
+        })
+        .send({ password: newUserPassword, oldPassword: newUserNewPassword })
+        .expect(200);
+    });
+
+    it('New New user delete profile:  /api/v1/auth/me (DELETE)', async () => {
+      await request(app)
+        .delete('/api/v1/auth/me')
+        .auth(newUserApiToken, {
+          type: 'bearer',
+        })
+        .expect(204);
+
+      return request(app)
+        .post('/api/v1/auth/email/login')
+        .send({ email: newUserEmail, password: newUserPassword })
+        .expect(422);
+    });
   });
 });
